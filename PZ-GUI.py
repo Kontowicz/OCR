@@ -1,6 +1,7 @@
 import pygame
+import re
+import cv2
 import easygui
-
 
 pygame.init()
 
@@ -17,6 +18,9 @@ buttonFont = pygame.font.Font(None, 30)
 footerFont = pygame.font.Font(None, 16)
 headerFont = pygame.font.Font(None, 50)
 
+image = {}
+textfile = {}
+results = {}
 
 def draw_app_text(screen):
     screen.blit(headerFont.render('OCR APP', True, BLACK), (WIDTH/2-80, 20))
@@ -55,27 +59,52 @@ def main():
     number = 0
 
     def load_files():
-        path = easygui.fileopenbox()
-        print(path)
-        f = open(path, 'r')
-        contents = f.read()
-        print(contents)
+        fileNamePattern = r'.*\\(.*\..*)'
+        paths = easygui.fileopenbox(title='Chose file', default='*.txt', filetypes=['*.png', '*.txt'], multiple=True)
+        print(paths)
+        for path in paths:
+            match = re.match(fileNamePattern, path)
+            if match:
+                fileName = match.group(1)
+                if path == None:
+                    continue
+                elif path[-3:].lower() == 'png':
+                    if fileName not in fileName:
+                        image[fileName] = cv2.imread(path, 0)
+                    else:
+                        raise 'File exist in collection'
+                elif path[-3:].lower() == 'txt':
+                    if fileName not in textfile:
+                        file = open(path, 'r')
+                        data = file.read()
+                        file.close()
+                        textfile[fileName] = data
+                    else:
+                        'File exist in collection'
+                    print(textfile)
+            else:
+                return
+        raise 'Invalid file type'
+        
+
 
     def save_results(): 
         path = easygui.filesavebox()   
-        f = open(path, 'a+')
-        f.write('xD')
-        f.close()
+        for key, value in results.iteritems():
+            file = open(key, 'w')
+            file.write(value)
+            file.close()
+
 
     def quit_game():  # A callback function for the button.
         nonlocal done
         done = True
 
-    button1 = create_button(100, 100, 180, 60, 'Load file(s)', load_files)
-    button2 = create_button(100, 200, 180, 60, 'Save results', save_results)
-    button3 = create_button(100, 300, 180, 60, 'Quit', quit_game)
+    buttonLoadFile = create_button(100, 100, 180, 60, 'Load file(s)', load_files)
+    buttonSave = create_button(100, 200, 180, 60, 'Save results', save_results)
+    buttonQuit = create_button(100, 300, 180, 60, 'Quit', quit_game)
     # A list that contains all buttons.
-    button_list = [button1, button2, button3]
+    button_list = [buttonLoadFile, buttonSave, buttonQuit]
 
     while not done:
         for event in pygame.event.get():
