@@ -36,8 +36,9 @@ def showResizedImage(image, divider):
   height, width = image.shape[:2]
   cv2.imshow(cv2.resize(image, (width//divider, height//divider), interpolation = cv2.INTER_CUBIC))
 
-scan = cv2.imread(scanPath)
-#showResizedImage(scan, 3)
+if __name__ == "__main__":
+  scan = cv2.imread(scanPath)
+  #showResizedImage(scan, 3)
 
-straightImage = (straightenImage(scan))
-#showResizedImage(straightImage, 3)
+  straightImage = (straightenImage(scan))
+  #showResizedImage(straightImage, 3)
