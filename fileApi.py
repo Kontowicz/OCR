@@ -8,6 +8,8 @@ class fileAPI(object):
         self.results = {}
 
     def getImage(self, fileName):
+        if fileName == None:
+            return
         data = None
         try:
             data = self.imageData[fileName]
@@ -16,6 +18,8 @@ class fileAPI(object):
         return data
 
     def getTextFile(self, fileName):
+        if fileName == None:
+            return
         data = None
         try:
             data = self.textData[fileName]
@@ -24,6 +28,8 @@ class fileAPI(object):
         return data
 
     def getResult(self, fileName):
+        if fileName == None:
+            return
         data = None
         try:
             data = self.results[fileName]
@@ -32,12 +38,35 @@ class fileAPI(object):
         return data
 
     def saveResults(self, path):
+        if path == None:
+            return
         for key, value in self.results.iteritems():
             file = open(str(key), 'r')
             file.write(value)
             file.close()
+
+    def compareTextFile(self, resultName, orginalFileName):
+        resultData = self.textData[resultName]
+        orginalFile = self.results[orginalFileName]
+        
+        minLen = min(len(resultData), len(orginalFile))
+        maxLen = max(len(resultData), len(orginalFile))
+        diffData = ''
+        for i in range(0, minLen):
+            if resultData[i] != orginalFile[i]:
+                diffData += 'x'
+            else:
+                diffData += resultData[i]
+
+        diffData = maxLen - minLen
+
+        diffData += 'x'*diffData
+
+        return diffData
             
     def readFiles(self, paths):
+        if paths == None:
+            return
         fileNamePattern = r'.*/(.*\..*)'
         for path in paths:
             match = re.match(fileNamePattern, path)
