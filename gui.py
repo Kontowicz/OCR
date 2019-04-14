@@ -63,12 +63,13 @@ def main():
 
     def load_files():
         paths = easygui.fileopenbox(title='Chose file', default='*.txt', filetypes=['*.png', '*.txt'], multiple=True)
-        api.readFiles(paths)
+        if paths != None:
+            api.readFiles(paths)
 
     def save_results():
         path = easygui.filesavebox()
-        api.saveResults(path)
-
+        if path != None:
+            api.saveResults(path)
 
     def quit_game():  # A callback function for the button.
         nonlocal done

@@ -17,11 +17,18 @@ class fileAPI(object):
 
     def getTextFile(self, fileName):
         data = None
-        print(self.textData)
         try:
             data = self.textData[fileName]
         except:
             raise 'Ivalid file name.'
+        return data
+
+    def getResult(self, fileName):
+        data = None
+        try:
+            data = self.results[fileName]
+        except:
+            raise 'Invalid file name.'
         return data
 
     def saveResults(self, path):
@@ -55,40 +62,41 @@ class fileAPI(object):
                     print(fileName)
                     raise 'Invalid file type'
 
-def compareIMG(img1, img2):
-    if img1.shape == img2.shape:
-        difference = cv2.subtract(img1, img2)
-        if cv2.countNonZero(difference) == 0:
-            return True
+if __name__ == "__main__":
+    def compareIMG(img1, img2):
+        if img1.shape == img2.shape:
+            difference = cv2.subtract(img1, img2)
+            if cv2.countNonZero(difference) == 0:
+                return True
 
-    return False
+        return False
 
-def fileApiUnitTests():
-    api = fileAPI()
+    def fileApiUnitTests():
+        api = fileAPI()
 
-    assert api.textData == {}
-    assert api.imageData == {}
-    assert api.results == {}
+        assert api.textData == {}
+        assert api.imageData == {}
+        assert api.results == {}
 
-    api.readFiles(['./data/macbeth.txt', './data/test.txt', './data/random.png', './data/random1.png'])
+        api.readFiles(['./data/macbeth.txt', './data/test.txt', './data/random.png', './data/random1.png'])
 
-    file = open('./data/macbeth.txt', 'r')
-    data = file.read()
-    file.close()
-    assert api.getTextFile('macbeth.txt') == data
+        file = open('./data/macbeth.txt', 'r')
+        data = file.read()
+        file.close()
+        assert api.getTextFile('macbeth.txt') == data
 
-    file = open('./data/test.txt', 'r')
-    data = file.read()
-    file.close()
-    assert api.getTextFile('test.txt') == data
+        file = open('./data/test.txt', 'r')
+        data = file.read()
+        file.close()
+        assert api.getTextFile('test.txt') == data
 
-    img = cv2.imread('./data/random.png', 0)
-    assert compareIMG(api.getImage('random.png'), img)
+        img = cv2.imread('./data/random.png', 0)
+        assert compareIMG(api.getImage('random.png'), img)
 
-    img = cv2.imread('./data/random1.png', 0)
-    assert compareIMG(api.getImage('random1.png'), img)
+        img = cv2.imread('./data/random1.png', 0)
+        assert compareIMG(api.getImage('random1.png'), img)
 
-    print('Pass')
+        print('Pass')
 
-fileApiUnitTests()
+    fileApiUnitTests()
 
