@@ -14,7 +14,7 @@ class fileAPI(object):
         try:
             data = self.imageData[fileName]
         except:
-            raise 'Ivalid file name.'
+            raise 'Invalid file name.'
         return data
 
     def getTextFile(self, fileName):
@@ -24,7 +24,7 @@ class fileAPI(object):
         try:
             data = self.textData[fileName]
         except:
-            raise 'Ivalid file name.'
+            raise 'Invalid file name.'
         return data
 
     def getResult(self, fileName):
@@ -37,6 +37,15 @@ class fileAPI(object):
             raise 'Invalid file name.'
         return data
 
+    def addResult(self, resultName, data):
+        if resultName == None:
+            return
+        try:
+            self.results[resultName] = data
+        except:
+            raise 'Couldnt add result.'
+        return
+
     def saveResults(self, path):
         if path == None:
             return
@@ -46,8 +55,8 @@ class fileAPI(object):
             file.close()
 
     def compareTextFile(self, resultName, orginalFileName):
-        resultData = self.textData[resultName]
-        orginalFile = self.results[orginalFileName]
+        resultData = self.results[resultName]
+        orginalFile = self.textData[orginalFileName]
         
         minLen = min(len(resultData), len(orginalFile))
         maxLen = max(len(resultData), len(orginalFile))
@@ -58,27 +67,29 @@ class fileAPI(object):
             else:
                 diffData += resultData[i]
 
-        diffData = maxLen - minLen
+        diffDataLen = maxLen - minLen
 
-        diffData += 'x'*diffData
+        diffData += 'x'*diffDataLen
 
         return diffData
             
     def readFiles(self, paths):
+        fileNames = []
         if paths == None:
             return
-        fileNamePattern = r'.*/(.*\..*)'
+        fileNamePattern = r'.*\\(.*\..*)'
         for path in paths:
             match = re.match(fileNamePattern, path)
             if match:
                 fileName = match.group(1)
                 if path == None:
                     continue
+                fileNames.append(fileName)
                 if path[-3:].lower() == 'png':
                     if fileName not in self.imageData:
-                        self.imageData[fileName] = cv2.imread(path, 0)
+                        self.imageData[fileName] = cv2.imread(path)
                     else:
-                        raise 'File exist in collection'
+                        raise 'File exists in collection'
                 elif path[-3:].lower() == 'txt':
                     if fileName not in self.textData:
                         file = open(path, 'r')
@@ -86,10 +97,11 @@ class fileAPI(object):
                         file.close()
                         self.textData[fileName] = data
                     else:
-                        'File exist in collection'
+                        'File exists in collection'
                 else:
                     print(fileName)
                     raise 'Invalid file type'
+        return fileNames
 
 if __name__ == "__main__":
     def compareIMG(img1, img2):
@@ -108,11 +120,17 @@ if __name__ == "__main__":
         assert api.results == {}
 
         api.readFiles(['./data/macbeth.txt', './data/test.txt', './data/random.png', './data/random1.png'])
+        file2 = open('./data/macbethChanged.txt', 'r')
+        data = file2.read()
+        file2.close()
+        api.addResult('macbethChanged.txt', data)
 
         file = open('./data/macbeth.txt', 'r')
         data = file.read()
         file.close()
         assert api.getTextFile('macbeth.txt') == data
+
+        assert api.compareTextFile('macbethChanged.txt', 'macbeth.txt')
 
         file = open('./data/test.txt', 'r')
         data = file.read()
@@ -124,6 +142,7 @@ if __name__ == "__main__":
 
         img = cv2.imread('./data/random1.png', 0)
         assert compareIMG(api.getImage('random1.png'), img)
+
 
         print('Pass')
 

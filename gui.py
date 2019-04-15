@@ -1,6 +1,7 @@
 import pygame
 import easygui
 import fileApi 
+import imageProcessing as imgProc
 
 class ocrApp(object):
     def __init__(self):
@@ -58,14 +59,16 @@ class ocrApp(object):
         number = 0
 
         def load_files():
-            paths = easygui.fileopenbox(title='Chose file', default='*.txt', filetypes=['*.png', '*.txt'], multiple=True)
+            paths = easygui.fileopenbox(title='Choose file', default='*.png', filetypes=['*.png', '*.txt'], multiple=True)
             if paths != None:
-                api.readFiles(paths)
+                fileNames = self.api.readFiles(paths)
+                imgProc.showResizedImage('Result',imgProc.straightenImage(self.api.getImage(fileNames[0])),2)
+                #DO POPRAWY WCZYTYWANIE ŚCIEŻKI
 
         def save_results():
             path = easygui.filesavebox()
             if path != None:
-                api.saveResults(path)
+                self.api.saveResults(path)
 
         def quit_game():  # A callback function for the button.
             nonlocal done
@@ -97,7 +100,7 @@ class ocrApp(object):
 
         while not done:
 
-            while self.layout == 1 and not done:
+            if self.layout == 1:
 
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -111,7 +114,7 @@ class ocrApp(object):
                                     #a tutaj callback funkcja batona
                                     button['callback']()
                             for button in button_menu:
-                                if button['rect'].collidepoint(event.pos):
+                                if button['rect'].collidepoint(event.pos) and button['callback'] is not None:
                                     button['callback']()
                     elif event.type == pygame.MOUSEMOTION:
                         #sprawdzamy jak poruszlismy myszkiem
@@ -126,7 +129,7 @@ class ocrApp(object):
                                 button['color'] = self.ACTIVE_COLOR
                             else:
                                 button['color'] = self.INACTIVE_COLOR
-                image = pygame.image.load('data/random.png')
+                image = pygame.image.load('data/test.png')
 
                 screen.fill(self.WHITE)
                 self.show_image(screen, image, 320, 130)
@@ -137,15 +140,14 @@ class ocrApp(object):
                     self.draw_button(button, screen)
                 pygame.display.update()
                 clock.tick(30)
-
-            while self.layout == 2 and not done:
+            elif self.layout == 2:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         done = True
                     elif event.type == pygame.MOUSEBUTTONDOWN:
                         if event.button == 1:
                             for button in button_menu:
-                                if button['rect'].collidepoint(event.pos):
+                                if button['rect'].collidepoint(event.pos) and button['callback'] is not None:
                                     button['callback']()
                     elif event.type == pygame.MOUSEMOTION:
                         for button in button_list2:
@@ -167,6 +169,7 @@ class ocrApp(object):
                     self.draw_button(button, screen)
                 pygame.display.update()
                 clock.tick(30)
+
 
 if __name__ == "__main__":
     app = ocrApp()
