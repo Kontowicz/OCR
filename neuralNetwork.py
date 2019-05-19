@@ -97,9 +97,7 @@ class model():
         return prediction
 
 if __name__ == "__main__":
-    # reader = datasetReader()
-    # reader.readDataFromArchiwe('label_synthetic_dataset_new.txt', '../Synthetic_dataset_new.zip', True)
     cnn = model([])
-    cnn.readModel('newweights.json', 'newmodels.h5')
-    print(chr(cnn.predict('e.jpg')))
-
+    cnn.readModel('model.json', 'weight.h5')
+    print(chr(cnn.predict('nazwaPliku.jpg')))
+# Wiem ze dziala z plikiem *.jpg jak z reszta to nie wiem - nie testowalem.
