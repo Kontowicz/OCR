@@ -10,69 +10,41 @@ from keras import backend as K
 from keras import optimizers
 from keras import losses
 import cv2
-from datasetReader import datasetReader
+
 from keras.models import model_from_json
 
 K.set_image_dim_ordering('th')
-
 
 
 class model():
     def __init__(self, data):
         self.model = None
         self.dataset = data
+        self.imageSize = 50
 
-    def trainModel(self, isSimpleModel, epochs):
-        data = self.dataset
+    def train(self):
+        self.model.fit(self.dataset[0], self.dataset[1], validation_data=(self.dataset[2], self.dataset[3]), epochs=10,
+                       batch_size=500, verbose=2)
+        scores = self.model.evaluate(self.dataset[2], self.dataset[3], verbose=0)
 
-        if isSimpleModel == True:
-            self.model = self.createSimpleModel(data[4])
-        else:
-            self.model = self.createComplexModel(data[4])
+        print("CNN Error: %.2f%%" % (100 - scores[1] * 100))
 
-        self.model.fit(data[0], data[1], validation_data=(data[2], data[3]), epochs= epoch, batch_size=200, verbose=2)
-        scores = self.model.evaluate(data[2], data[3], verbose=0)
-        print("CNN Error: %.2f%%" % (100-scores[1]*100))
+        return (100 - scores[1] * 100)
 
-    def createSimpleModel(self, num_classes):
+    def createSimpleModel(self):
+        num_classes = self.dataset[4]
         print('Num classes: {}'.format(num_classes))
         model = Sequential()
-        model.add(Conv2D(32, (5, 5), input_shape=(1, 28, 28), activation='relu'))
+        model.add(Conv2D(32, (5, 5), input_shape=(1, self.imageSize, self.imageSize), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.2))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.3))
         model.add(Flatten())
-        model.add(Dense(128, activation='relu'))
+        model.add(Dense(num_classes * 2, activation='relu'))
         model.add(Dense(num_classes, activation='softmax'))
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        return model
-
-    def createComplexModel(self, num_classes):
-        model = Sequential()
-        model.add(Conv2D(32, (3, 3), input_shape=(1, 28, 28)))
-        model.add(Activation('relu'))
-        BatchNormalization(axis=-1)
-        model.add(Conv2D(32, (3, 3)))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        BatchNormalization(axis=-1)
-        model.add(Conv2D(64, (3, 3)))
-        model.add(Activation('relu'))
-        BatchNormalization(axis=-1)
-        model.add(Conv2D(64, (3, 3)))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Flatten())
-        BatchNormalization()
-        model.add(Dense(512))
-        model.add(Activation('relu'))
-        BatchNormalization()
-        model.add(Dropout(0.2))
-        model.add(Dense(num_classes))
-        model.add(Activation('softmax'))
-
-        model.compile(loss= losses.categorical_crossentropy, optimizer= optimizers.Adam(), metrics=['accuracy'])
-
-        return model
+        self.model = model
 
     def saveModel(self, modelName, modelWeight):
         model_json = self.model.to_json()
@@ -86,18 +58,13 @@ class model():
         json_file.close()
         self.model = model_from_json(loaded_model_json)
         self.model.load_weights(modelWeight)
+        # self.model.compile(loss= losses.categorical_crossentropy, optimizer= optimizers.Adam(), metrics=['accuracy'])
         print("Loaded model from disk")
 
     def predict(self, file):
         img = cv2.imread(file, 0)
-        imgResize = cv2.resize(img, (int(28),int(28)))
+        imgResize = cv2.resize(img, (int(28), int(28)))
         new_tmp = np.array([imgResize])
         new = new_tmp.reshape(new_tmp.shape[0], 1, 28, 28).astype('float32')
         prediction = self.model.predict_classes(new)
-        return prediction
-
-if __name__ == "__main__":
-    cnn = model([])
-    cnn.readModel('model.json', 'weight.h5')
-    print(chr(cnn.predict('nazwaPliku.jpg')))
-# Wiem ze dziala z plikiem *.jpg jak z reszta to nie wiem - nie testowalem.
+        return chr(prediction)
