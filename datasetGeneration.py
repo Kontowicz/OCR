@@ -1,24 +1,59 @@
 from PIL import Image, ImageDraw, ImageFont
 import glob
 import os
+import re
+import shutil
 
-strip_width, strip_height = 50, 50
+def readBin(binLabels):
+    with open(binLabels, 'rb') as file:
+        data = file.read()
+        data = data.decode('utf-8')
+        data = data.split('\n')
+        for item in data:
+            print(item)
 
-def center_text(img, font, text, color=(0,0,0)):
+def center_text(img, font, text, strip_width, strip_height, text_color=(0,0,0)):
     draw = ImageDraw.Draw(img)
     text_width, text_height = draw.textsize(text, font)
     position = ((strip_width-text_width)/2,(strip_height-text_height)/2)
-    draw.text(position, text, color, font=font)
+    draw.text(position, text, text_color, font=font)
     return img
 
-def generate_dataset(out, path_to_fonts, image_width, image_height, size):
+def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_height, size, in_many_dir):
+
+    if not os.path.exists(out):
+        os.mkdir(out)
+    else:
+        shutil.rmtree(out)
+        os.mkdir(out)
+
+    file = open(out_file_name, 'wb')
+
+    all_characters = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZąęćźżĄĘĆŹŻ!@#$%^&*()_+=-[]\{\};:",.<>/?\''
+    counter = 0
+    pattern = '.*/(.*)'
 
     for font in glob.glob(path_to_fonts):
-        text = "A"
+        match = re.match(pattern, font)
+        font_name = match.group(1)
+        if in_many_dir:
+            os.mkdir('{}/{}'.format(out, font_name))
 
-        background = Image.new('RGB', (strip_width, strip_height), (255, 255, 255))  # creating the black strip
         myfont = ImageFont.truetype(font, size)
-        center_text(background, myfont, text)
-        background.save("hello.png", "PNG")
 
-generate_dataset('./out', './fonts/*', 50, 50, 30)
+        for character in all_characters:
+            character = 'ą'
+            background = Image.new('RGB', (image_width, image_height), (255, 255, 255))
+            center_text(background, myfont, character, image_width, image_height)
+            if in_many_dir:
+                background.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
+            else:
+                background.save('{}/{}.png'.format(out, counter), "PNG")
+            file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
+            counter += 1
+            break
+
+    file.close()
+
+
+generate_dataset('../out', './fonts/*', './labels', 50, 50, 30, False)
