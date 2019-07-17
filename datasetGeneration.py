@@ -1,4 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import glob
 import os
 import re
@@ -30,6 +30,7 @@ def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_heigh
     file = open(out_file_name, 'wb')
 
     all_characters = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZąęćźżĄĘĆŹŻ!@#$%^&*()_+=-[]\{\};:",.<>/?\''
+
     counter = 0
     pattern = '.*/(.*)'
 
@@ -42,7 +43,6 @@ def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_heigh
         myfont = ImageFont.truetype(font, size)
 
         for character in all_characters:
-            character = 'ą'
             background = Image.new('RGB', (image_width, image_height), (255, 255, 255))
             center_text(background, myfont, character, image_width, image_height)
             if in_many_dir:
@@ -51,9 +51,30 @@ def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_heigh
                 background.save('{}/{}.png'.format(out, counter), "PNG")
             file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
             counter += 1
-            break
 
+            image_blur = background.filter(ImageFilter.GaussianBlur(radius=3))
+            if in_many_dir:
+                image_blur.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
+            else:
+                image_blur.save('{}/{}.png'.format(out, counter), "PNG")
+            file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
+            counter += 1
+
+            image_blur = background.filter(ImageFilter.MedianFilter())
+            if in_many_dir:
+                image_blur.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
+            else:
+                image_blur.save('{}/{}.png'.format(out, counter), "PNG")
+            file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
+            counter += 1
+
+            image_blur = background.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+            if in_many_dir:
+                image_blur.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
+            else:
+                image_blur.save('{}/{}.png'.format(out, counter), "PNG")
+            file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
+            counter += 1
     file.close()
-
 
 generate_dataset('../out', './fonts/*', './labels', 50, 50, 30, False)
