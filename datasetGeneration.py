@@ -19,13 +19,15 @@ def center_text(img, font, text, strip_width, strip_height, text_color=(0,0,0)):
     draw.text(position, text, text_color, font=font)
     return img
 
-def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_height, size, in_many_dir):
+def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_height, size):
 
     if not os.path.exists(out):
         os.mkdir(out)
     else:
         shutil.rmtree(out)
         os.mkdir(out)
+        os.mkdir('{}/train'.format(out))
+        os.mkdir('{}/test'.format(out))
 
     file = open(out_file_name, 'wb')
 
@@ -34,47 +36,42 @@ def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_heigh
     counter = 0
     pattern = '.*/(.*)'
 
-    for font in glob.glob(path_to_fonts):
+    for i, font in enumerate(glob.glob(path_to_fonts)):
         match = re.match(pattern, font)
+
         font_name = match.group(1)
-        if in_many_dir:
-            os.mkdir('{}/{}'.format(out, font_name))
 
         myfont = ImageFont.truetype(font, size)
+
+        if i % 6 == 0:
+            path_to_save = '{}/{}/'.format(out, 'test')
+        else:
+            path_to_save = '{}/{}/'.format(out, 'train')
+
 
         for character in all_characters:
             background = Image.new('RGB', (image_width, image_height), (255, 255, 255))
             center_text(background, myfont, character, image_width, image_height)
-            if in_many_dir:
-                background.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
-            else:
-                background.save('{}/{}.png'.format(out, counter), "PNG")
+
+            background.save('{}/{}.png'.format(path_to_save, counter), "PNG")
             file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
             counter += 1
 
             image_blur = background.filter(ImageFilter.GaussianBlur(radius=3))
-            if in_many_dir:
-                image_blur.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
-            else:
-                image_blur.save('{}/{}.png'.format(out, counter), "PNG")
+            image_blur.save('{}/{}.png'.format(path_to_save, counter), "PNG")
             file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
             counter += 1
 
             image_blur = background.filter(ImageFilter.MedianFilter())
-            if in_many_dir:
-                image_blur.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
-            else:
-                image_blur.save('{}/{}.png'.format(out, counter), "PNG")
+            image_blur.save('{}/{}.png'.format(path_to_save, counter), "PNG")
             file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
             counter += 1
 
             image_blur = background.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
-            if in_many_dir:
-                image_blur.save('{}/{}/{}.png'.format(out, font_name, counter), "PNG")
-            else:
-                image_blur.save('{}/{}.png'.format(out, counter), "PNG")
+            image_blur.save('{}/{}.png'.format(path_to_save, counter), "PNG")
             file.write('{} {} {}\n'.format(counter, character, font_name).encode('utf-8'))
             counter += 1
+
     file.close()
 
-generate_dataset('../out', './fonts/*', './labels', 50, 50, 30, False)
+generate_dataset('../out', './fonts/*', './labels', 50, 50, 30)
