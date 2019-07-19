@@ -19,7 +19,7 @@ def center_text(img, font, text, strip_width, strip_height, text_color=(0,0,0)):
     draw.text(position, text, text_color, font=font)
     return img
 
-def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_height, size):
+def generate_dataset(out, path_to_fonts, image_width, image_height, size):
 
     if not os.path.exists(out):
         os.mkdir(out)
@@ -29,17 +29,21 @@ def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_heigh
         os.mkdir('{}/train'.format(out))
         os.mkdir('{}/test'.format(out))
 
-    file = open(out_file_name, 'wb')
+    file = open('{}/label_character'.format(out), 'wb')
+    fonts_code = open('{}/label_fonts'.format(out), 'wb')
 
     all_characters = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZąęćźżĄĘĆŹŻ!@#$%^&*()_+=-[]\{\};:",.<>/?\''
 
     counter = 0
+    font_counter = 0
     pattern = '.*/(.*)'
 
     for i, font in enumerate(glob.glob(path_to_fonts)):
         match = re.match(pattern, font)
 
         font_name = match.group(1)
+        fonts_code.write('{} {}\n'.format(font_name, counter).encode('utf-8'))
+        font_counter += 1
 
         myfont = ImageFont.truetype(font, size)
 
@@ -73,5 +77,5 @@ def generate_dataset(out, path_to_fonts, out_file_name, image_width, image_heigh
             counter += 1
 
     file.close()
-
-generate_dataset('../out', './fonts/*', './labels', 50, 50, 30)
+    fonts_code.close()
+generate_dataset('../out', './fonts/*', 50, 50, 30)
