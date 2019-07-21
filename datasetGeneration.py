@@ -3,6 +3,17 @@ import glob
 import os
 import re
 import shutil
+import cv2
+import numpy as np
+
+def gausian_blur(img, size = 3):
+    return cv2.GaussianBlur(img,(size, size), 0)
+
+def avg(img, size = 3):
+    return cv2.blur(img,(size, size))
+
+def median(img, size = 3):
+    return cv2.medianBlur(img, size)
 
 def readBin(binLabels):
     with open(binLabels, 'rb') as file:
@@ -55,24 +66,23 @@ def generate_dataset(out, path_to_fonts, image_width, image_height, size):
             background = Image.new('RGB', (image_width, image_height), (255, 255, 255))
             center_text(background, myfont, character, image_width, image_height)
 
-            background.save('{}/{}.png'.format(path_to_save, counter), "PNG")
+            img = np.array(background)
+
+            img_blur = gausian_blur(img)
+            cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
             file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
             counter += 1
 
-            image_blur = background.filter(ImageFilter.GaussianBlur(radius=3))
-            image_blur.save('{}/{}.png'.format(path_to_save, counter), "PNG")
+            img_blur = avg(img)
+            cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
             file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
             counter += 1
 
-            image_blur = background.filter(ImageFilter.MedianFilter())
-            image_blur.save('{}/{}.png'.format(path_to_save, counter), "PNG")
+            img_blur = median(img)
+            cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
             file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
             counter += 1
-
-            image_blur = background.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
-            image_blur.save('{}/{}.png'.format(path_to_save, counter), "PNG")
-            file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-            counter += 1
-
     file.close()
-generate_dataset('../out', './fonts/*', 50, 50, 30)
+
+if __name__ == '__main__':
+    generate_dataset('../out', './fonts/*', 50, 50, 30)
