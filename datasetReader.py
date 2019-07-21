@@ -94,7 +94,7 @@ class datasetReader:
         self.prepare_data(train_data, test_data)
 
 
-    def read_data_from_archiwe(self, path_to_data, path_to_labels):
+    def read_data_from_archiwe(self, path_to_data):
         print('Data is reading from archiwe: {}/train and {}/test'.format(path_to_data, path_to_data))
 
         character_dictionary, font_dictionary = self.read_labels(path_to_data)
