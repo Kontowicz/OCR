@@ -30,7 +30,7 @@ def center_text(img, font, text, strip_width, strip_height, text_color=(0,0,0)):
     draw.text(position, text, text_color, font=font)
     return img
 
-def generate_dataset(out, path_to_fonts, image_width, image_height, size):
+def generate_dataset(out, path_to_fonts, image_width, image_height, sizes):
 
     if not os.path.exists(out):
         os.mkdir(out)
@@ -48,41 +48,46 @@ def generate_dataset(out, path_to_fonts, image_width, image_height, size):
     font_counter = 0
     pattern = '.*/(.*)'
 
-    for i, font in enumerate(glob.glob(path_to_fonts)):
-        match = re.match(pattern, font)
+    for size in sizes:
+        for i, font in enumerate(glob.glob(path_to_fonts)):
+            match = re.match(pattern, font)
 
-        font_name = match.group(1)
-        font_counter += 1
+            font_name = match.group(1)
+            font_counter += 1
 
-        myfont = ImageFont.truetype(font, size)
+            myfont = ImageFont.truetype(font, size)
 
-        if i % 6 == 0:
-            path_to_save = '{}/{}/'.format(out, 'test')
-        else:
-            path_to_save = '{}/{}/'.format(out, 'train')
+            if i % 6 == 0:
+                path_to_save = '{}/{}/'.format(out, 'test')
+            else:
+                path_to_save = '{}/{}/'.format(out, 'train')
 
 
-        for character in all_characters:
-            background = Image.new('RGB', (image_width, image_height), (255, 255, 255))
-            center_text(background, myfont, character, image_width, image_height)
+            for character in all_characters:
+                background = Image.new('RGB', (image_width, image_height), (255, 255, 255))
+                center_text(background, myfont, character, image_width, image_height)
 
-            img = np.array(background)
+                img = np.array(background)
 
-            img_blur = gausian_blur(img)
-            cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
-            file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-            counter += 1
+                cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img)
+                file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
+                counter += 1
 
-            img_blur = avg(img)
-            cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
-            file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-            counter += 1
-
-            img_blur = median(img)
-            cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
-            file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-            counter += 1
+                # img_blur = gausian_blur(img)
+                # cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
+                # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
+                # counter += 1
+                #
+                # img_blur = avg(img)
+                # cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
+                # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
+                # counter += 1
+                #
+                # img_blur = median(img)
+                # cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
+                # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
+                # counter += 1
     file.close()
 
 if __name__ == '__main__':
-    generate_dataset('../out', './fonts/*', 50, 50, 30)
+    generate_dataset('../out', './fonts/*', 50, 50, [25, 30, 35, 40, 45])
