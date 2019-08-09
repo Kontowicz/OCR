@@ -1,4 +1,5 @@
 import random
+import glob
 import cv2
 import numpy as np
 import re
@@ -6,21 +7,37 @@ import os
 from MyZipFile import ZipFile
 from keras.utils import np_utils
 
-fonts_code = {'Calibri' : 0, 'Times' : 1, 'Arial' : 2, 'Aparaj' : 3, 'Book' : 4, 'Cambria' : 5, 'Candara' : 6, \
-            'Century' : 7, 'Consola' : 8, 'Constan' : 9, 'Corbel' : 10, 'DokChamp' : 11, 'Euphemia' : 12, \
-            'FRAD' : 13, 'FRAH' : 14, 'FRAMD' : 15, 'FRAB' : 16, 'Gara' : 17, 'Georgia' : 18, 'Impact' : 19,\
-            'Verdana' : 20}
 
 class datasetReader:
     def __init__(self):
-        self.orginalData = None
+        self.data = None
 
-    def getData(self):
-        data = self.orginalData
-        random.shuffle(data)
-        train = data[0:int(len(data) * 0.7)]
-        test = data[int(len(data) * 0.7):len(data) - 1]
+    def read_labels(self, path_to_labels):
+        with open('{}/label'.format(path_to_labels), 'rb') as file:
+            character_data = file.read()
+            character_data = character_data.decode('utf-8')
+            character_data = character_data.split('\n')
+            pattern = '(.*) (.*) (.*) (.*)'
+            # counter, character, font_name, font_counter
 
+            character_dictionary = {}
+            font_dictionary = {}
+
+            for item in character_data:
+                if item != '\n' and item != '':
+                    match = re.match(pattern, item)
+
+                    counter_picture = match.group(1)
+                    font_name = match.group(3)
+                    character = ord(match.group(2))
+                    font_counter = match.group(4)
+
+                    character_dictionary['{}.png'.format(counter_picture)] = character
+                    font_dictionary[font_name] = font_counter
+
+        return character_dictionary, font_dictionary
+
+    def prepare_data(self, train, test):
         X_train = []
         Y_train = []
 
@@ -42,8 +59,8 @@ class datasetReader:
         X_test = data[2]
         y_test = data[3]
 
-        X_train = X_train.reshape(X_train.shape[0], 1, 28, 28).astype('float32')
-        X_test = X_test.reshape(X_test.shape[0], 1, 28, 28).astype('float32')
+        X_train = X_train.reshape(X_train.shape[0], 1, 50, 50).astype('float32')
+        X_test = X_test.reshape(X_test.shape[0], 1, 50, 50).astype('float32')
 
         X_train = X_train / 255
         X_test = X_test / 255
@@ -53,70 +70,47 @@ class datasetReader:
 
         num_classes = y_test.shape[1]
 
-        return [X_train, y_train, X_test, y_test, num_classes]
+        self.data = [X_train, y_train, X_test, y_test, num_classes]
 
-    def readData(self, pathToLabels, pathToDataset, isFont):
-        print('Data is reading from directory: {}'.format(pathToDataset))
-        data = []
-        labels = open(pathToLabels, 'r')
-        labels_data = labels.read()
-        labels_data = labels_data.split('\n')
-        regex = '([\d]+) (.+) (.+)'
-        p = re.compile(regex)
-        labels.close()
-        contain = {}
+    def read_data(self, path_to_data):
+        print('Data is reading from: {}'.format(path_to_data))
 
-        for line in labels_data:
-            if line:
-                m = p.match(line)
-                number = m.group(1)
-                char = m.group(2)
-                font = m.group(3)
-                contain[number + '.jpg'] = [char, font]
+        character_dictionary, font_dictionary = self.read_labels(path_to_data)
 
-        for file in os.listdir(pathToDataset):
-            if file.endswith('.jpg'):
-                label = None
-                if isFont == True:
-                    label = fonts_code[contain[file][1]]
-                else:
-                    label = ord(contain[file][0])
-                img = cv2.imread('{}/{}'.format(pathToDataset, file), 0)
-                img2 = cv2.resize(img, (28, 28))
-                data.append([label, img2])
+        # Read train data
+        train_data = []
+        for picture in glob.glob('{}/train/*'.format(path_to_data)):
+            pattern = '.*/(.*)'
+            match = re.match(pattern, picture)
+            train_data.append([character_dictionary[match.group(1)], cv2.imread(picture, 0)])
 
-        self.orginalData = data
+        # Read train data
+        test_data = []
+        for picture in glob.glob('{}/test/*'.format(path_to_data)):
+            pattern = '.*/(.*)'
+            match = re.match(pattern, picture)
+            test_data.append([character_dictionary[match.group(1)], cv2.imread(picture, 0)])
 
-    def readDataFromArchiwe(self, pathToLables, pathToArchiwe, isFont):
-        assert pathToArchiwe.endswith('zip') == True
-        print('Data is reading from archiwe: {}'.format(pathToArchiwe))
-        dataToReturn = []
-        labels = open(pathToLables, 'r')
-        labels_data = labels.read()
-        labels_data = labels_data.split('\n')
-        labels.close()
-        labelRegex = re.compile('([\d]+) (.+) (.+)')
-        contain = {}
+        self.prepare_data(train_data, test_data)
 
-        for line in labels_data:
-            if line:
-                m = labelRegex.match(line)
-                contain[m.group(1)] = [m.group(2), m.group(3)]
 
-        with ZipFile(pathToArchiwe) as archiwe:
-            regex = '.+/(.+)\.jpg'
-            matchObject = re.compile(regex)
+    def read_data_from_archiwe(self, path_to_data):
+        print('Data is reading from archiwe: {}/train and {}/test'.format(path_to_data, path_to_data))
+
+        character_dictionary, font_dictionary = self.read_labels(path_to_data)
+
+        # Read train data
+        train_data = []
+        with ZipFile('{}/train.zip'.format(path_to_data)) as archiwe:
             for entry in archiwe.infolist():
-                fileName = matchObject.match(entry.filename).group(1)
-                label = None
-                if isFont == True:
-                    label = fonts_code[contain[fileName][1]]
-                else:
-                    label = ord(contain[fileName][0])
                 data = archiwe.read(entry)
                 img = cv2.imdecode(np.frombuffer(data, np.uint8), 0)
-                img2 = cv2.resize(img, (28, 28))
+                train_data.append([character_dictionary[entry.filename], img])
 
-                dataToReturn.append([label, img2])
-
-        self.orginalData = dataToReturn
+        test_data = []
+        with ZipFile('{}/test.zip'.format(path_to_data)) as archiwe:
+            for entry in archiwe.infolist():
+                data = archiwe.read(entry)
+                img = cv2.imdecode(np.frombuffer(data, np.uint8), 0)
+                test_data.append([character_dictionary[entry.filename], img])
+        self.prepare_data(train_data, test_data)

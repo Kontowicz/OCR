@@ -9,6 +9,7 @@ from keras.layers.convolutional import MaxPooling2D
 from keras import backend as K
 from keras import optimizers
 from keras import losses
+from datasetReader import datasetReader
 import cv2
 
 from keras.models import model_from_json
@@ -68,3 +69,13 @@ class model():
         new = new_tmp.reshape(new_tmp.shape[0], 1, 28, 28).astype('float32')
         prediction = self.model.predict_classes(new)
         return chr(prediction)
+
+if __name__ == '__main__':
+    reader = datasetReader()
+
+    #reader.read_data('/home/piotr/Desktop/develop/repo/out')
+    reader.read_data_from_archiwe('/home/piotr/Desktop/develop/repo/out_zip', '/home/piotr/Desktop/develop/repo/out_zip/lables')
+
+    model = model(reader.data)
+    model.createSimpleModel()
+    model.train()
