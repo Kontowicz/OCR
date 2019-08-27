@@ -83,11 +83,11 @@ def generate_dataset(out, path_to_fonts, image_width, image_height, sizes):
                 # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
                 # counter += 1
                 #
-                # img_blur = median(img)
-                # cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
-                # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-                # counter += 1
+                img_blur = median(img)
+                cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
+                file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
+                counter += 1
     file.close()
 
 if __name__ == '__main__':
-    generate_dataset('../out', './fonts/*', 50, 50, [25, 30, 35, 40, 45])
+    generate_dataset('../out', './fonts/*', 50, 50, [25, 30, 35, 40])

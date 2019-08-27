@@ -74,7 +74,7 @@ if __name__ == '__main__':
     reader = datasetReader()
 
     #reader.read_data('/home/piotr/Desktop/develop/repo/out')
-    reader.read_data_from_archiwe('/home/piotr/Desktop/develop/repo/out_zip', '/home/piotr/Desktop/develop/repo/out_zip/lables')
+    reader.read_data_from_archiwe('/home/piotr/Desktop/develop/repo/out_zip')
 
     model = model(reader.data)
     model.createSimpleModel()
