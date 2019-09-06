@@ -4,6 +4,7 @@ from tkinter import filedialog
 from PIL import ImageTk, Image
 from ocr_tesseract import get_words_cords
 import cv2
+import copy
 import fileApi 
 
 
@@ -26,7 +27,7 @@ class ResultsWindow:
         self.images = images
         self.master = master
 
-        self.images_marked = [] # cv2 img
+        self.images_marked = img_data # cv2 img
         self.images_orginal = img_data # cv2 img
 
         self.words_cords = get_words_cords(self.images_orginal)
@@ -56,7 +57,7 @@ class ResultsWindow:
         self.frame.mainloop()
 
     def set_image(self):
-        img = Image.open(self.images[self.counter])
+        img = Image.fromarray( self.images_marked[self.counter][1])
         img.thumbnail((RESULTS_WIDTH - 10, RESULTS_HEIGHT - 120), Image.ANTIALIAS)
         img = ImageTk.PhotoImage(img)
         self.panel.configure(image=img)
@@ -75,21 +76,20 @@ class ResultsWindow:
         self.set_image()
 
     def mark_word(self, word):
+        self.images_marked = []
         tmp = []
         for key in self.words_cords:
             print(key)
             if word in key:
                 tmp.append(self.words_cords[key])
-
+        test = copy.deepcopy(self.images_orginal)
         for t in tmp:
             for path, cords in t.items():
-                for img in self.images_orginal:
+                for img in test:
                     if img[0] == path:
-
-                        w = cv2.rectangle(img[1], cords[0], cords[1], (255, 255, 0), 3)
-                        cv2.imshow('sa', w)
-                        cv2.waitKey(0)
-                        self.images_marked.append(w)
+                        w = cv2.rectangle(img[1], cords[0], cords[1], (255, 25, 25), 6)
+                        img[1] = w
+        self.images_marked = test
 
     def find(self):
         w = self.entry_word.get()
@@ -99,7 +99,7 @@ class ResultsWindow:
         #szukanie slowa na obrazie
     
     def remove(self):
-        self.images.remove(self.images[self.counter])
+        self.images.remove(self.images_marked[self.counter])
         self.counter=0
         messagebox.showinfo('Info', 'Deleted successfully!')
 
