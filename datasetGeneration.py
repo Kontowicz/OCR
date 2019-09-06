@@ -73,16 +73,6 @@ def generate_dataset(out, path_to_fonts, image_width, image_height, sizes):
                 file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
                 counter += 1
 
-                # img_blur = gausian_blur(img)
-                # cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
-                # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-                # counter += 1
-                #
-                # img_blur = avg(img)
-                # cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
-                # file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
-                # counter += 1
-                #
                 img_blur = median(img)
                 cv2.imwrite('{}/{}.png'.format(path_to_save, counter), img_blur)
                 file.write('{} {} {} {}\n'.format(counter, character, font_name, font_counter).encode('utf-8'))
@@ -90,4 +80,4 @@ def generate_dataset(out, path_to_fonts, image_width, image_height, sizes):
     file.close()
 
 if __name__ == '__main__':
-    generate_dataset('../out', './fonts/*', 50, 50, [25, 30, 35, 40])
+    generate_dataset('../out', './fonts/*', 50, 50, [30, 35])

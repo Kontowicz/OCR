@@ -2,7 +2,6 @@ import os
 import cv2
 import numpy as np
 
-scanPath = os.path.join('gdrive','My Drive','Files','scan1.jpg')
 
 def BGRtoGRAY(image):
   if image.shape[2] == 3:
@@ -37,7 +36,7 @@ def showResizedImage(image, divider):
   cv2.imshow(cv2.resize(image, (width//divider, height//divider), interpolation = cv2.INTER_CUBIC))
 
 if __name__ == "__main__":
-  scan = cv2.imread(scanPath)
+  scan = cv2.imread('./data/hejka.png')
   #showResizedImage(scan, 3)
 
   straightImage = (straightenImage(scan))

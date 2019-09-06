@@ -3,22 +3,18 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.layers import Dropout
 from keras.layers import Flatten
-from keras.layers.normalization import BatchNormalization
-from keras.layers.convolutional import Conv2D
-from keras.layers.convolutional import MaxPooling2D
+from keras.layers.convolutional import *
 from keras import backend as K
-from keras import optimizers
-from keras import losses
 from datasetReader import datasetReader
 import cv2
-
+# keras.__version__ == 2.2.4
 from keras.models import model_from_json
 
 K.set_image_dim_ordering('th')
 
 
 class model():
-    def __init__(self, data):
+    def __init__(self, data=[]):
         self.model = None
         self.dataset = data
         self.imageSize = 50
@@ -47,6 +43,31 @@ class model():
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         self.model = model
 
+    def create_complex(self):
+        num_classes = self.dataset[4]
+        model = Sequential()
+
+        model.add(Conv2D(32, (5,5), input_shape=(1, self.imageSize, self.imageSize)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+        model.add(Conv2D(16, (3, 3)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Conv2D(8, (3, 3)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Flatten())
+        model.add(Dropout(0.2))
+        model.add(Dense(num_classes * 2))
+        model.add(Activation('relu'))
+        model.add(Dropout(0.2))
+        model.add(Dense(num_classes))
+        model.add(Activation('softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        self.model = model
+
+
+
     def saveModel(self, modelName, modelWeight):
         model_json = self.model.to_json()
         with open(modelName, "w") as json_file:
@@ -62,11 +83,11 @@ class model():
         # self.model.compile(loss= losses.categorical_crossentropy, optimizer= optimizers.Adam(), metrics=['accuracy'])
         print("Loaded model from disk")
 
-    def predict(self, file):
-        img = cv2.imread(file, 0)
-        imgResize = cv2.resize(img, (int(28), int(28)))
+    def predict(self, img):
+        #img = cv2.imread(file, 0)
+        imgResize = cv2.resize(img, (int(50), int(50)))
         new_tmp = np.array([imgResize])
-        new = new_tmp.reshape(new_tmp.shape[0], 1, 28, 28).astype('float32')
+        new = new_tmp.reshape(new_tmp.shape[0], 1, 50, 50).astype('float32')
         prediction = self.model.predict_classes(new)
         return chr(prediction)
 
@@ -74,8 +95,8 @@ if __name__ == '__main__':
     reader = datasetReader()
 
     #reader.read_data('/home/piotr/Desktop/develop/repo/out')
-    reader.read_data_from_archiwe('/home/piotr/Desktop/develop/repo/out_zip')
+    reader.read_data('../out')
 
     model = model(reader.data)
-    model.createSimpleModel()
+    model.create_complex()
     model.train()
