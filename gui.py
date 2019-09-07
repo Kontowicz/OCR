@@ -23,8 +23,6 @@ class ResultsWindow:
     counter = 0
     def __init__(self, master, images, img_data, mode):
         self.api = fileApi.fileAPI()
-        self.img_word_cord = {}
-        self.images = images
         self.master = master
 
         self.images_marked = img_data # cv2 img
@@ -40,7 +38,7 @@ class ResultsWindow:
         remove_button = Button(self.frame, text='Remove image', command=self.remove)
         add_button = Button(self.frame, text='Add image(s)', command=self.add)
 
-        img = Image.open(self.images[self.counter])
+        img = Image.fromarray( self.images_marked[self.counter][1])
         img.thumbnail((RESULTS_WIDTH - 10, RESULTS_HEIGHT - 120), Image.ANTIALIAS)
         img = ImageTk.PhotoImage(img)
         self.panel = Label(self.frame, image=img)
@@ -57,22 +55,25 @@ class ResultsWindow:
         self.frame.mainloop()
 
     def set_image(self):
-        img = Image.fromarray( self.images_marked[self.counter][1])
-        img.thumbnail((RESULTS_WIDTH - 10, RESULTS_HEIGHT - 120), Image.ANTIALIAS)
-        img = ImageTk.PhotoImage(img)
-        self.panel.configure(image=img)
-        self.panel.image = img
+        if len(self.images_marked) != 0:
+            img = Image.fromarray( self.images_marked[self.counter][1])
+            img.thumbnail((RESULTS_WIDTH - 10, RESULTS_HEIGHT - 120), Image.ANTIALIAS)
+            img = ImageTk.PhotoImage(img)
+            self.panel.configure(image=img)
+            self.panel.image = img
 
     def next_image(self):
+        print(self.counter)
         self.counter += 1
-        if self.counter > len(self.images) - 1:
+        if self.counter > len(self.images_marked) - 1:
             self.counter = 0
         self.set_image()
 
     def previous_image(self):
+        print(self.counter)
         self.counter -= 1
         if self.counter < 0:
-            self.counter = len(self.images) - 1
+            self.counter = len(self.images_marked) - 1
         self.set_image()
 
     def mark_word(self, word):
@@ -96,22 +97,23 @@ class ResultsWindow:
         if w != '':
             print(w)
             self.mark_word(w)
-        #szukanie slowa na obrazie
-    
+
     def remove(self):
-        self.images.remove(self.images_marked[self.counter])
+        self.images_orginal.remove(self.images_orginal[self.counter])
+        self.images_marked.remove(self.images_marked[self.counter])
         self.counter=0
         messagebox.showinfo('Info', 'Deleted successfully!')
 
     def add(self):
         files = list(filedialog.askopenfilenames(parent=self.master, title='Choose image file(s)', filetypes=(("All files", "*.*"), ("PNG", "*.png"), ("JPG", "*.jpg"), ("Bitmap", "*.bmp"))))
         if len(files) != 0:
-            messagebox.showinfo('Info', 'Added image(s)!')
-            #fileNames = self.api.readFiles(files)
-            #imgProc.showResizedImage('Result',imgProc.straightenImage(self.api.getImage(fileNames[0])),2)
+
             for file in files:
-                self.images.append(file)
-        print(f'files: {self.images}')
+                self.images_orginal.append([file, cv2.imread(file)])
+        self.words_cords = get_words_cords(self.images_orginal)
+        self.counter = 0
+        self.set_image()
+        messagebox.showinfo('Info', 'Added image(s)!')
 
 class UI:
     def test(self):

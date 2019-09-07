@@ -213,6 +213,6 @@ def get_words_cords(images):
                         text_cords[word][path] = cords
                     else:
                         text_cords[word][path] = text_cords[word][path].append(cords)
-    print(text_cords)
+
     return text_cords
 
