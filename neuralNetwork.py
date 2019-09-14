@@ -89,7 +89,7 @@ class model():
         new_tmp = np.array([imgResize])
         new = new_tmp.reshape(new_tmp.shape[0], 1, 50, 50).astype('float32')
         prediction = self.model.predict_classes(new)
-        return chr(prediction)
+        return prediction
 
 if __name__ == '__main__':
     reader = datasetReader()
