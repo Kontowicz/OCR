@@ -85,9 +85,10 @@ class model():
 
     def predict(self, img):
         #img = cv2.imread(file, 0)
-        imgResize = cv2.resize(img, (int(50), int(50)))
+
+        imgResize = cv2.resize(img, (int(self.imageSize), int(self.imageSize)))
         new_tmp = np.array([imgResize])
-        new = new_tmp.reshape(new_tmp.shape[0], 1, 50, 50).astype('float32')
+        new = new_tmp.reshape(new_tmp.shape[0], 1, self.imageSize, self.imageSize).astype('float32')
         prediction = self.model.predict_classes(new)
         return prediction
 

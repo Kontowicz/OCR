@@ -2,7 +2,8 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog
 from PIL import ImageTk, Image
-from ocr_tesseract import get_words_cords
+#from ocr_tesseract import get_words_cords
+from new_prediction_flow import get_words_cords
 import cv2
 import copy
 import fileApi 

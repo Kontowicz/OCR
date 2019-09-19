@@ -2,19 +2,9 @@ from neuralNetwork import model
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+import pytesseract
 import cv2
-
-character_type_cnn = model([])
-character_type_cnn.readModel('models/4/char_type/model.json', 'models/4/char_type/weight.h5')
-
-numbers_cnn = model([])
-numbers_cnn.readModel('models/4/numbers/model.json', 'models/4/numbers/weight.h5')
-
-character_cnn = model([])
-character_cnn.readModel('models/4/letters/model.json', 'models/4/letters/weight.h5')
-
-specjal_cnn = model([])
-specjal_cnn.readModel('models/4/specjal/model.json', 'models/4/specjal/weight.h5')
+from math import floor, ceil
 
 SMALL_HEIGHT = 800
 
@@ -45,10 +35,6 @@ def resize(img, height=SMALL_HEIGHT, always=False):
 def ratio(img, height=SMALL_HEIGHT):
     """Getting scale ratio."""
     return img.shape[0] / height
-
-image = cv2.cvtColor(cv2.imread('data/nowitam2.png'), cv2.COLOR_BGR2RGB)
-
-img = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 def sobel(channel):
     """ The Sobel Operator"""
@@ -365,6 +351,7 @@ def recreate_coordinates(coords, scale, shape):
 
     return [x1, y1, x2, y2]
 
+
 def add_padding(image, percent=30):
     img = image.copy()
     h, w = img.shape[:2]
@@ -378,111 +365,102 @@ def add_padding(image, percent=30):
         tmp = [row[i] for row in img]
         if 0 in tmp:
             width.append(i)
-    if len(height) == 0:
+
+    #print(f'height" {height}')
+    if len(height) <= 1:
         height.append(0)
         height.append(h)
-    if len(width) == 0:
+
+    #print(f'widht: {width}')
+    if len(width) <= 1:
         width.append(0)
         width.append(w)
+
     minY = min(height)
     maxY = max(height)
 
     minX = min(width)
     maxX = max(width)
+
     newImg = img[minY: maxY, minX:maxX]
 
-    h, w = newImg.shape[:2]
-    # TU MAMY OBCIĘTĄ LITERKĘ ŁADNIE
-    # TODO: RESIZE DO PROPORCJI
-    X = int(w * 40 / h)
-   # implt(newImg, 'gray', t='Before: Add padding')
-
-    imgResized = cv2.resize(newImg, (X, 40))
+    #print(newImg)
+    imgResized = cv2.resize(newImg, (40, 40))
 
     color = [255, 255, 255]
     new_im = cv2.copyMakeBorder(imgResized.copy(), 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=color)
 
-    #implt(new_im, 'gray', t='After: Add padding')
     return new_im
 
-grayIMG = img.copy()
+def get_words_cords(images):
+    text_cords = {}
+    character_type_cnn = model([])
+    character_type_cnn.readModel('models/all_padding/model.json', 'models/all_padding/weight.h5')
 
-b_w = cv2.adaptiveThreshold(grayIMG, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 11, 2);
+    for path, image in images:
+        img = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        grayIMG = img.copy()
 
-horizontal_img = b_w.copy()
-vertical_img = b_w.copy()
+        b_w = cv2.adaptiveThreshold(grayIMG, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 11, 2);
 
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 1))
-horizontal_img = cv2.erode(horizontal_img, kernel, iterations=1)
-horizontal_img = cv2.dilate(horizontal_img, kernel, iterations=1)
+        horizontal_img = b_w.copy()
+        vertical_img = b_w.copy()
 
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 100))
-vertical_img = cv2.erode(vertical_img, kernel, iterations=1)
-vertical_img = cv2.dilate(vertical_img, kernel, iterations=1)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 1))
+        horizontal_img = cv2.erode(horizontal_img, kernel, iterations=1)
+        horizontal_img = cv2.dilate(horizontal_img, kernel, iterations=1)
 
-mask_img = horizontal_img + vertical_img
-joints = np.bitwise_and(horizontal_img, vertical_img)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 100))
+        vertical_img = cv2.erode(vertical_img, kernel, iterations=1)
+        vertical_img = cv2.dilate(vertical_img, kernel, iterations=1)
 
-inv_mask_img = np.bitwise_not(mask_img)
-no_border = np.bitwise_xor(b_w, inv_mask_img)
+        mask_img = horizontal_img + vertical_img
 
-b_w = cv2.cvtColor(no_border, cv2.COLOR_GRAY2RGB)
-blurredIMG = cv2.GaussianBlur(b_w, (5, 5), 30)
-edgesIMG = edge_detect(blurredIMG)
-_, edgesIMG = cv2.threshold(edgesIMG, 50, 255, cv2.THRESH_BINARY)
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-b_w = cv2.morphologyEx(edgesIMG, cv2.MORPH_CLOSE, kernel, 3)
+        inv_mask_img = np.bitwise_not(mask_img)
+        no_border = np.bitwise_xor(b_w, inv_mask_img)
 
-boxes, rois = textDetectWatershed(b_w, image.copy(), draw=False, group=True)
+        b_w = cv2.cvtColor(no_border, cv2.COLOR_GRAY2RGB)
+        blurredIMG = cv2.GaussianBlur(b_w, (5, 5), 30)
+        edgesIMG = edge_detect(blurredIMG)
+        _, edgesIMG = cv2.threshold(edgesIMG, 50, 255, cv2.THRESH_BINARY)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        b_w = cv2.morphologyEx(edgesIMG, cv2.MORPH_CLOSE, kernel, 3)
 
-# Zrobić sortowanie boxów od
-newHeight = 200
-from math import ceil, floor
+        boxes, rois = textDetectWatershed(b_w, image.copy(), draw=False, group=True)
 
-for i, roi in enumerate(rois[:34]):
-    sharpened = sharpen(resize(roi, always=True))
-    #   implt(sharpened, 'gray')
-    [X1, Y1, X2, Y2] = boxes[i]
-    roiFromOriginal = image[Y1:Y2, X1:X2]
-    print("Coords", (X1, Y1), (X2, Y2))
-    implt(roi)
+        newHeight = 200
 
-    yRatio = ratio(roiFromOriginal, height=newHeight)
-    characters = letters_detect(resize(sharpened, height=newHeight, always=True),
-                                resize(roi, height=newHeight, always=True), group=True, draw=False, offset=10)
+        for i, roi in enumerate(rois[:34]):
+            sharpened = sharpen(resize(roi, always=True))
+            [X1, Y1, X2, Y2] = boxes[i]
+            cords = [(X1, Y1), (X2, Y2)]
+            roiFromOriginal = image[Y1:Y2, X1:X2]
 
-    letters = []
-    for coords in sorted(characters, key=lambda t: t[0]):
-        [x1, y1, x2, y2] = recreate_coordinates(coords, yRatio, roiFromOriginal.shape[:2])
+            yRatio = ratio(roiFromOriginal, height=newHeight)
+            characters = letters_detect(resize(sharpened, height=newHeight, always=True),
+                                        resize(roi, height=newHeight, always=True), group=True, draw=False, offset=10)
 
+            letters = []
+            for coords in sorted(characters, key=lambda t: t[0]):
+                [x1, y1, x2, y2] = recreate_coordinates(coords, yRatio, roiFromOriginal.shape[:2])
+                letters.append(roiFromOriginal[y1:y2, x1:x2])
 
-        letters.append(roiFromOriginal[y1:y2, x1:x2])
-    word = ""
-    Lekk = 55
-    for letter in letters:
-        letterTmp = cv2.cvtColor(letter, cv2.COLOR_RGB2GRAY)
+            word = ""
 
-        letterTmp = sharpen_small(letterTmp)
-        #implt(letterTmp, 'gray', t='After: Sharpen small')
-        letterTmp = add_padding(letterTmp, 30)
-        imgResized = cv2.resize(letterTmp, (int(50), int(50)))
+            for letter in letters:
+                letterTmp = cv2.cvtColor(letter, cv2.COLOR_RGB2GRAY)
+                letterTmp = sharpen_small(letterTmp)
+                letterTmp = add_padding(letterTmp, 30)
 
-        implt(imgResized, 'gray', 'Resized')
-        img_tmp = Image.fromarray(letterTmp)
-        result = None
-        char_class = int(character_type_cnn.predict(letterTmp))
-        print(f'Character class: {char_class}')
-        if char_class == 0: # numbser
-            result = chr(numbers_cnn.predict(letterTmp))
-        if char_class == 1: # letters
-            result = chr(character_cnn.predict(letterTmp))
-        if char_class == 2: # specjal
-            result = chr(specjal_cnn.predict(letterTmp))
-        #cv2.imwrite('data/dupa.png', imgResized)
-        print(f'prediction: {result}')
-        # # prediction = loaded_model.predict(imgResized)
-        # # print(prediction)
-        # print(result)
-        word += result
+                result = chr(character_type_cnn.predict(letterTmp))
+                word += result
 
-    print("Predicted = ", word)
+            if word != '':
+                if word not in text_cords:
+                    text_cords[word] = {path: cords}
+                else:
+                    if path not in text_cords[word]:
+                        text_cords[word][path] = cords
+                    else:
+                        text_cords[word][path] = text_cords[word][path].append(cords)
+    return text_cords
