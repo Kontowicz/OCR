@@ -98,6 +98,7 @@ class ResultsWindow:
         if w != '':
             print(w)
             self.mark_word(w)
+            self.set_image()
 
     def remove(self):
         self.images_orginal.remove(self.images_orginal[self.counter])
