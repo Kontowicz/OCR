@@ -2,8 +2,8 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog
 from PIL import ImageTk, Image
-#from ocr_tesseract import get_words_cords
-from new_prediction_flow import get_words_cords
+from ocr_tesseract import get_words_cords
+from new_prediction_flow import get_words_cords_cnn
 import cv2
 import copy
 import fileApi 
@@ -22,14 +22,20 @@ RESULTS_HEIGHT = 1024
 
 class ResultsWindow:
     counter = 0
-    def __init__(self, master, images, img_data, mode):
+    def __init__(self, master, images, img_data, select):
         self.api = fileApi.fileAPI()
+        self.select = select.get()
         self.master = master
 
         self.images_marked = img_data # cv2 img
         self.images_orginal = img_data # cv2 img
 
-        self.words_cords = get_words_cords(self.images_orginal)
+        if self.select == 1:
+            print('test 1')
+            self.words_cords = get_words_cords(self.images_orginal)
+        elif self.select == 2:
+            print('test 2')
+            self.words_cords = get_words_cords_cnn(self.images_orginal)
 
         self.frame = Frame(self.master)
         next_button = Button(self.frame, text='Next image', command=self.next_image)
@@ -112,7 +118,12 @@ class ResultsWindow:
 
             for file in files:
                 self.images_orginal.append([file, cv2.imread(file)])
-        self.words_cords = get_words_cords(self.images_orginal)
+
+        if self.select == 1:
+            self.words_cords = get_words_cords(self.images_orginal)
+        elif self.select == 2:
+            self.words_cords = get_words_cords_cnn(self.images_orginal)
+
         self.counter = 0
         self.set_image()
         messagebox.showinfo('Info', 'Added image(s)!')
@@ -140,8 +151,8 @@ class UI:
         footer.place(x=10, y=375)
 
         
-        r1 = Radiobutton(self.root, text='Faktura', variable = self.var, value = 1)
-        r2 = Radiobutton(self.root, text='Tekst naukowy', variable = self.var, value = 2)
+        r1 = Radiobutton(self.root, text='Tesseract', variable = self.var, value = 1)
+        r2 = Radiobutton(self.root, text='Model', variable = self.var, value = 2)
 
         r1.pack()
         r2.pack()

@@ -2,7 +2,7 @@ from neuralNetwork import model
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-import pytesseract
+#import pytesseract
 import cv2
 from math import floor, ceil
 
@@ -351,7 +351,6 @@ def recreate_coordinates(coords, scale, shape):
 
     return [x1, y1, x2, y2]
 
-
 def add_padding(image, percent=30):
     img = image.copy()
     h, w = img.shape[:2]
@@ -392,7 +391,7 @@ def add_padding(image, percent=30):
 
     return new_im
 
-def get_words_cords(images):
+def get_words_cords_cnn(images):
     text_cords = {}
     character_type_cnn = model([])
     character_type_cnn.readModel('models/all_padding/model.json', 'models/all_padding/weight.h5')
