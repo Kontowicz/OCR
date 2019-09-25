@@ -1,16 +1,29 @@
 import pytesseract
-from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-
+from math import ceil, floor
+from PIL import Image
 SMALL_HEIGHT = 800
+
 
 def implt(img, cmp=None, t=''):
     """Show image using plt."""
     plt.imshow(img, cmap=cmp)
     plt.title(t)
     plt.show()
+
+
+def implt_group(images, cmp=None, t=''):
+    plt.figure()
+
+    for i, im in enumerate(images):
+        if i < 16:
+            plt.subplot(2, 8, i + 1)
+            plt.axis('off')
+            plt.imshow(im, cmap=cmp, aspect='auto')
+    plt.show()
+
 
 def resize(img, height=SMALL_HEIGHT, always=False):
     """Resize image to given height."""
@@ -20,19 +33,20 @@ def resize(img, height=SMALL_HEIGHT, always=False):
 
     return img
 
+
 def ratio(img, height=SMALL_HEIGHT):
     """Getting scale ratio."""
     return img.shape[0] / height
+
 
 def sobel(channel):
     """ The Sobel Operator"""
     sobelX = cv2.Sobel(channel, cv2.CV_16S, 1, 0)
     sobelY = cv2.Sobel(channel, cv2.CV_16S, 0, 1)
-    # Combine x, y gradient magnitudes sqrt(x^2 + y^2)
     sobel = np.hypot(sobelX, sobelY)
     sobel[sobel > 255] = 255
-
     return np.uint8(sobel)
+
 
 def edge_detect(im):
     """
@@ -41,12 +55,44 @@ def edge_detect(im):
     """
     return np.max(np.array([sobel(im[:, :, 0]), sobel(im[:, :, 1]), sobel(im[:, :, 2])]), axis=0)
 
+
 def union(a, b):
     x = min(a[0], b[0])
     y = min(a[1], b[1])
     w = max(a[0] + a[2], b[0] + b[2]) - x
     h = max(a[1] + a[3], b[1] + b[3]) - y
     return [x, y, w, h]
+
+
+def contain(a, b):
+    wMin = min(a[2], b[2])
+    aL = a[0]
+    aR = a[0] + a[2]
+    bL = b[0]
+    bR = b[0] + b[2]
+
+    # b is smaller
+    if wMin == b[2]:
+        return bL >= aL and bR <= aR
+    # a is smaller
+    else:
+        return aL >= bL and aR <= bR
+
+
+def erase_top_white_padding(image):
+    imgray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    blacks = []
+    for x in range(imgray.shape[1]):
+        for y in range(imgray.shape[0]):
+            if imgray[y, x] != 255:
+                blacks.append([y, x])
+    minY = (min(blacks, key=lambda t: t[0]))[0]
+    maxY = (max(blacks, key=lambda t: t[0]))[0]
+    minX = (min(blacks, key=lambda t: t[1]))[1]
+    maxX = (max(blacks, key=lambda t: t[1]))[1]
+
+    return image[minY:, minX:maxX]
+
 
 def intersect(a, b):
     # (10, 20, )
@@ -57,6 +103,33 @@ def intersect(a, b):
     if w < 0 or h < 0:
         return False
     return True
+
+
+def group_rectangles2(rec):
+    """
+    Union intersecting rectangles
+    Args:
+        rec - list of rectangles in form [x, y, w, h]
+    Return:
+        list of grouped ractangles
+    """
+    tested = [False for i in range(len(rec))]
+    final = []
+    i = 0
+    while i < len(rec):
+        if not tested[i]:
+            j = i + 1
+            while j < len(rec):
+                if not tested[j] and contain(rec[i], rec[j]):
+                    rec[i] = union(rec[i], rec[j])
+                    tested[j] = True
+                    j = i
+                j += 1
+            final += [rec[i]]
+        i += 1
+
+    return final
+
 
 def group_rectangles(rec):
     """
@@ -82,6 +155,50 @@ def group_rectangles(rec):
         i += 1
 
     return final
+
+
+def letters_detect(img, original, group=True, draw=False, offset=0):
+    """ Text detection using contours """
+    # Resize image
+    small = resize(img, 2000)
+    image = resize(original, 2000)
+
+    # Finding contours
+    mask = np.zeros(small.shape, np.uint8)
+    cnt, hierarchy = cv2.findContours(np.copy(small), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Variables for contour index and words' bounding boxes
+    index = 0
+    boxes = []
+    while (index >= 0):
+        x, y, w, h = cv2.boundingRect(cnt[index])
+        cv2.drawContours(mask, cnt, index, (255, 255, 255), cv2.FILLED)
+        maskROI = mask[y:y + h, x:x + w]
+        r = cv2.countNonZero(maskROI) / (w * h)
+
+        if r > 0.1 and 2000 > w > 10 and 1600 > h > 10 and 0.25 < h / w < 10 and 0.1 < w / h < 3.5:
+            boxes += [[x, y, w, h]]
+        index = hierarchy[0][index][0]
+
+    if group:
+        boxes = group_rectangles2(boxes)
+
+    offsetH = int(h * offset / 100)
+    offsetW = int(w * offset / 100)
+
+    bounding_boxes = np.array([0, 0, 0, 0])
+    for (x, y, w, h) in boxes:
+        if draw:
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        bounding_boxes = np.vstack(
+            (bounding_boxes, np.array([x - offsetW, y - offsetH, x + w + offsetW, y + h + offsetH])))
+    if draw:
+        implt(image, t='Bounding rectangles')
+
+    # Recalculate coordinates to original scale
+    boxes = bounding_boxes.dot(ratio(image, small.shape[0])).astype(np.float32)
+    return boxes[1:]
+
 
 def textDetectWatershed(thresh, original, draw=False, group=False):
     """ Text detection using watershed algorithm """
@@ -166,11 +283,134 @@ def textDetectWatershed(thresh, original, draw=False, group=False):
 
     return boxes, rois
 
+
+def sharpen(img):
+    ret, newImg = cv2.threshold(img, 123, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (11, 11))
+    newImg = cv2.dilate(newImg, kernel, 3)
+    blurred2 = cv2.GaussianBlur(newImg, (3, 3), 1)
+
+    edges2 = edge_detect(blurred2)
+    bw_image2 = cv2.morphologyEx(edges2, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+
+    return bw_image2
+
+
+def sharpen_small(img):
+    ret, newImg = cv2.threshold(img, 180, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 2))
+    newImg = cv2.erode(newImg, kernel, 1)
+    newImgCopy = newImg.copy()
+
+    h, w = newImg.shape[:2]
+
+    seedPoints = []
+    times = 0
+    x = w // 2
+    for i, y in enumerate(newImg[:, x]):
+
+        if y == 0:
+            times += 1
+            if times == 3:
+                seedPoints.append((i, x))
+        else:
+            times = 0
+    for i, seedPoint in enumerate(seedPoints):
+        floodFill(image=newImg, seedPoint=seedPoint, replacementColor=180)
+    newImg = (erase_noise(newImgCopy, newImg, seedPoints[0]))
+    newImg[newImg != 255] = 0
+    newImg = newImg.astype(np.float32)
+
+    return newImg
+
+
+def erase_noise(original, floodfilled, seedPoint):
+    im_floodfill_inv = cv2.bitwise_not(floodfilled)
+    im_out = original | im_floodfill_inv
+    return im_out
+
+
+def floodFill(image, seedPoint, replacementColor):
+    h, w = image.shape[:2]
+    (y, x) = seedPoint
+    if x - 1 <= 0 or y - 1 <= 0 or y + 1 >= h or x + 1 >= w:
+        return
+    targetColor = image[seedPoint]
+    if targetColor == replacementColor:
+        return
+    image[seedPoint] = replacementColor
+    pixelsToCheck = [seedPoint]
+    while 0 < len(pixelsToCheck):
+        (y, x) = pixelsToCheck.pop(0)
+        if x - 1 <= 0 or y - 1 <= 0 or y + 1 >= h or x + 1 >= w:
+            continue
+        for position in [(y, x - 1), (y + 1, x), (y, x + 1), (y - 1, x)]:
+            if image[position] == targetColor:
+                image[position] = replacementColor
+                pixelsToCheck.append(position)
+
+
+def recreate_coordinates(coords, scale, shape):
+    if len(coords) != 4:
+        return
+    [h, w] = shape
+    [x1, y1, x2, y2] = [c * scale for c in coords]
+    #   print("Rescaled",x1,y1,x2,y2)
+    x1 = floor(x1)
+    x2 = ceil(x2)
+    y1 = floor(y1)
+    y2 = ceil(y2)
+    #   print("Rounded",x1,y1,x2,y2)
+    [x1, y1, x2, y2] = [0 if c < 0 else c for c in [x1, y1, x2, y2]]
+
+    [x1, x2] = [w if c > w else c for c in [x1, x2]]
+    [y1, y2] = [h if c > h else c for c in [y1, y2]]
+    #   print("Checked",x1,y1,x2,y2)
+
+    return [x1, y1, x2, y2]
+
+
+def add_padding(image, percent=30):
+    img = image.copy()
+    h, w = img.shape[:2]
+    height = []
+    for i in range(0, h):
+        if 0 in img[i]:
+            height.append(i)
+
+    width = []
+    for i in range(0, w):
+        tmp = [row[i] for row in img]
+        if 0 in tmp:
+            width.append(i)
+    if len(height) == 0:
+        height.append(0)
+        height.append(h)
+    if len(width) == 0:
+        width.append(0)
+        width.append(w)
+    minY = min(height)
+    maxY = max(height)
+
+    minX = min(width)
+    maxX = max(width)
+    newImg = img[minY: maxY, minX:maxX]
+
+    h, w = newImg.shape[:2]
+    X = int(w * 40 / h)
+
+    imgResized = cv2.resize(newImg, (X, 40))
+
+    color = [255, 255, 255]
+    new_im = cv2.copyMakeBorder(imgResized.copy(), 5, 5, 5, 5, cv2.BORDER_CONSTANT, value=color)
+
+    return new_im
+
+
 def get_words_cords(images):
     text_cords = {}
     for path, image in images:
         img = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
         grayIMG = img.copy()
 
         b_w = cv2.adaptiveThreshold(grayIMG, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 11, 2);
@@ -178,11 +418,11 @@ def get_words_cords(images):
         horizontal_img = b_w.copy()
         vertical_img = b_w.copy()
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 1))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100,1))
         horizontal_img = cv2.erode(horizontal_img, kernel, iterations=1)
         horizontal_img = cv2.dilate(horizontal_img, kernel, iterations=1)
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 100))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1,100))
         vertical_img = cv2.erode(vertical_img, kernel, iterations=1)
         vertical_img = cv2.dilate(vertical_img, kernel, iterations=1)
 
@@ -195,10 +435,11 @@ def get_words_cords(images):
         blurredIMG = cv2.GaussianBlur(b_w, (5, 5), 30)
         edgesIMG = edge_detect(blurredIMG)
         _, edgesIMG = cv2.threshold(edgesIMG, 50, 255, cv2.THRESH_BINARY)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
         b_w = cv2.morphologyEx(edgesIMG, cv2.MORPH_CLOSE, kernel, 3)
-
         boxes, rois = textDetectWatershed(b_w, image.copy(), draw=False, group=True)
+
+        newHeight = 200
 
         for i, roi in enumerate(rois[:34]):
             [X1, Y1, X2, Y2] = boxes[i]
